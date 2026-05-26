@@ -24,7 +24,8 @@ EXTS = {".jpg", ".jpeg", ".png"}
 FILL_MODE = os.environ.get("IMAGE_FILL_MODE", "contain").lower()
 
 ROOT = pathlib.Path(__file__).parent
-SRC_DIR = ROOT / "source"
+# Is kurio aplanko imti nuotraukas (numatyta "source"; galima keisti per SOURCE_DIR)
+SRC_DIR = ROOT / os.environ.get("SOURCE_DIR", "source")
 DST_DIR = ROOT / "media"
 
 
@@ -55,13 +56,14 @@ def make_story(img: Image.Image) -> Image.Image:
 def main() -> None:
     SRC_DIR.mkdir(exist_ok=True)
     DST_DIR.mkdir(exist_ok=True)
+    print(f"Naudojamas aplankas: {SRC_DIR.name}/")
 
     sources = [
         p for p in SRC_DIR.iterdir()
         if p.is_file() and p.suffix.lower() in EXTS
     ]
     if not sources:
-        print("source/ aplanke nera paveiksleliu - nieko neapdorota.")
+        print(f"{SRC_DIR.name}/ aplanke nera paveiksleliu - nieko neapdorota.")
         return
 
     # Issvalom senus apdorotus (kad neliktu naslaiciu), .gitkeep paliekam

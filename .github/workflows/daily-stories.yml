@@ -7,7 +7,15 @@ on:
     # Ziema (EET  = UTC+2): 07:00 UTC  -> 09:00 Lietuvoje
     # Jei nori kito laiko - pakeisk skaicius zemiau (formatas: minute valanda * * *).
     - cron: "0 6 * * *"
-  workflow_dispatch: {}   # leidzia paleisti RANKINIU BUDU is Actions skirtuko (testavimui)
+  workflow_dispatch:      # leidzia paleisti RANKINIU BUDU is Actions skirtuko
+    inputs:
+      source:
+        description: "Is kurio aplanko imti nuotraukas"
+        type: choice
+        default: source
+        options:
+          - source
+          - source2
 
 permissions:
   contents: write   # leidzia Action'ui issaugoti apdorotus paveikslelius atgal i repa
@@ -29,6 +37,10 @@ jobs:
 
       - name: Paruosti paveikslelius (source/ -> media/, 1080x1920)
         run: python prepare_images.py
+        env:
+          # Rankiniam paleidimui - is pasirinkto aplanko; cron'ui - numatytas 'source'
+          SOURCE_DIR: ${{ github.event.inputs.source || 'source' }}
+          IMAGE_FILL_MODE: contain   # contain = visas vaizdas + fonas; cover = pilnas remas (apkarpo)
 
       - name: Issaugoti apdorotus paveikslelius atgal i repa
         run: |
