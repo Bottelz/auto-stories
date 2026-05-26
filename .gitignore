@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+
+# Ekrano nuotraukos / juodrasciai projekto saknyje (NE story turinys is media/)
+/*.png
+/*.jpg
+/*.jpeg
