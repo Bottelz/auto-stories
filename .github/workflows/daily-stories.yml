@@ -9,6 +9,9 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch: {}   # leidzia paleisti RANKINIU BUDU is Actions skirtuko (testavimui)
 
+permissions:
+  contents: write   # leidzia Action'ui issaugoti apdorotus paveikslelius atgal i repa
+
 jobs:
   post:
     runs-on: ubuntu-latest
@@ -23,6 +26,23 @@ jobs:
 
       - name: Idiegti priklausomybes
         run: pip install -r requirements.txt
+
+      - name: Paruosti paveikslelius (source/ -> media/, 1080x1920)
+        run: python prepare_images.py
+
+      - name: Issaugoti apdorotus paveikslelius atgal i repa
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add media
+          if git diff --staged --quiet; then
+            echo "Pakeitimu media/ nera - praleidziu."
+          else
+            git commit -m "Auto: apdoroti story paveiksleliai (1080x1920)"
+            git push
+            echo "Palaukiam, kol raw URL atsinaujins..."
+            sleep 10
+          fi
 
       - name: Paskelbti story
         run: python post_stories.py

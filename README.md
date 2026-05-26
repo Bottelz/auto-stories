@@ -17,13 +17,19 @@ kompiuteris įjungtas**. Nemokama, be banų rizikos, be naršyklės automatizavi
 
 ```
 auto-stories/
-├─ post_stories.py                  # pagrindinis skriptas
-├─ requirements.txt                 # Python priklausomybės (requests)
-├─ media/                           # ČIA dedi savo story paveikslėlius (.jpg/.png)
-├─ .github/workflows/daily-stories.yml   # cron — paleidžia kasdien
+├─ post_stories.py                  # pagrindinis skriptas (kelia story)
+├─ prepare_images.py                # paverčia source/ nuotraukas į 1080x1920 → media/
+├─ requirements.txt                 # Python priklausomybės (requests, Pillow)
+├─ source/                          # ČIA dedi BET KOKIO formato nuotraukas
+├─ media/                           # automatiškai sugeneruoti 1080x1920 story paveikslėliai
+├─ .github/workflows/daily-stories.yml   # cron — kasdien paruošia + kelia
 ├─ .env.example                     # pavyzdys lokaliam testavimui
 └─ README.md
 ```
+
+> 📐 **Nuotraukas dedi į `source/`** (bet koks formatas). Workflow automatiškai jas paverčia
+> 1080×1920 (9:16) story rėmu (vaizdas centre be iškraipymo, fonas užpildytas suliejus) ir
+> įrašo į `media/`. Tau formatuoti nieko nereikia.
 
 Skriptas kiekvieną paleidimą **atsitiktinai parenka iki `STORIES_PER_RUN` paveikslėlių**
 (numatyta 50) iš `media/` ir paskelbia kiekvieną kaip atskirą story. Jei `media/` yra
