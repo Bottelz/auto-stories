@@ -76,7 +76,7 @@ def main() -> None:
         with Image.open(src) as im:
             story = make_story(im)
         story.save(out, "JPEG", quality=90)
-        print(f"OK: source/{src.name} -> media/{out.name}")
+        print(f"OK: {SRC_DIR.name}/{src.name} -> media/{out.name}")
 
     print(f"Apdorota: {len(sources)} paveiksleliu.")
 

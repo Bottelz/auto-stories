@@ -12,7 +12,7 @@ on:
       source:
         description: "Is kurio aplanko imti nuotraukas"
         type: choice
-        default: source
+        default: source2
         options:
           - source
           - source2
@@ -38,8 +38,8 @@ jobs:
       - name: Paruosti paveikslelius (source/ -> media/, 1080x1920)
         run: python prepare_images.py
         env:
-          # Rankiniam paleidimui - is pasirinkto aplanko; cron'ui - numatytas 'source'
-          SOURCE_DIR: ${{ github.event.inputs.source || 'source' }}
+          # Rankiniam paleidimui - is pasirinkto aplanko; cron'ui (9:00 LT) - 'source2'
+          SOURCE_DIR: ${{ github.event.inputs.source || 'source2' }}
           IMAGE_FILL_MODE: contain   # contain = visas vaizdas + fonas; cover = pilnas remas (apkarpo)
 
       - name: Issaugoti apdorotus paveikslelius atgal i repa
