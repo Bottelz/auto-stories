@@ -10,6 +10,7 @@ Paleidziama automatiskai per GitHub Actions; gali paleisti ir lokaliai:
     python prepare_images.py
 """
 
+import os
 import pathlib
 
 from PIL import Image, ImageOps, ImageFilter
@@ -17,6 +18,10 @@ from PIL import Image, ImageOps, ImageFilter
 TARGET_W, TARGET_H = 1080, 1920   # Instagram/Facebook story drobe (9:16)
 BLUR_RADIUS = 40
 EXTS = {".jpg", ".jpeg", ".png"}
+
+# contain = visas vaizdas matosi (didinamas) + sulietas fonas uzpildo likuti
+# cover   = nuotrauka uzpildo VISA rema iki krastu (perteklius apkarpomas, be fono)
+FILL_MODE = os.environ.get("IMAGE_FILL_MODE", "contain").lower()
 
 ROOT = pathlib.Path(__file__).parent
 SRC_DIR = ROOT / "source"
@@ -27,16 +32,22 @@ def make_story(img: Image.Image) -> Image.Image:
     """Sukuria 1080x1920 story is bet kokio formato paveikslelio."""
     img = img.convert("RGB")
 
-    # Fonas: uzdengia visa drobe (cover, su apkarpymu) + suliejimas
+    # cover: nuotrauka uzpildo visa rema iki krastu (perteklius apkarpomas)
+    if FILL_MODE == "cover":
+        return ImageOps.fit(img, (TARGET_W, TARGET_H), method=Image.LANCZOS)
+
+    # contain: sulietas fonas + visas vaizdas, DIDINAMAS kad uzpildytu kuo daugiau
     bg = ImageOps.fit(img, (TARGET_W, TARGET_H), method=Image.LANCZOS)
     bg = bg.filter(ImageFilter.GaussianBlur(BLUR_RADIUS))
 
-    # Pirmas planas: visas vaizdas itelpa i drobe (contain), be apkarpymo
-    fg = img.copy()
-    fg.thumbnail((TARGET_W, TARGET_H), Image.LANCZOS)
+    # Mastelis: itelpa i drobe (be apkarpymo), bet ir DIDINA mazas nuotraukas
+    scale = min(TARGET_W / img.width, TARGET_H / img.height)
+    new_w = max(1, round(img.width * scale))
+    new_h = max(1, round(img.height * scale))
+    fg = img.resize((new_w, new_h), Image.LANCZOS)
 
-    x = (TARGET_W - fg.width) // 2
-    y = (TARGET_H - fg.height) // 2
+    x = (TARGET_W - new_w) // 2
+    y = (TARGET_H - new_h) // 2
     bg.paste(fg, (x, y))
     return bg
 
