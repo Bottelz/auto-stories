@@ -55,8 +55,11 @@ def pick_media_files(count: int) -> list:
     n = min(count, len(files))
     if len(files) < count:
         log(f"DEMESIO: media/ yra tik {len(files)} paveiksleliu (prasyta {count}). Keliami visi.")
+    # random.sample parenka ATSITIKTINIUS failus; po to dar permaisom, kad ir
+    # PASKELBIMO TVARKA butu atsitiktine (NE pagal pavadinima), net keliant visus.
     chosen = random.sample(files, n)
-    log(f"Atsitiktinai parinkta {n} paveiksleliu (is {len(files)} esanciu).")
+    random.shuffle(chosen)
+    log(f"Atsitiktinai parinkta {n} paveiksleliu atsitiktine tvarka (is {len(files)} esanciu).")
     return chosen
 
 

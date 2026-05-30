@@ -24,9 +24,20 @@ EXTS = {".jpg", ".jpeg", ".png"}
 FILL_MODE = os.environ.get("IMAGE_FILL_MODE", "contain").lower()
 
 ROOT = pathlib.Path(__file__).parent
-# Is kurio aplanko imti nuotraukas (numatyta "source"; galima keisti per SOURCE_DIR)
-SRC_DIR = ROOT / os.environ.get("SOURCE_DIR", "source")
 DST_DIR = ROOT / "media"
+
+# Is kurio aplanko (-u) imti nuotraukas. Galimos reiksmes per SOURCE_DIR:
+#   "source"   -> tik pirmas aplankas
+#   "source2"  -> tik antras aplankas
+#   "both"     -> abu aplankai sujungiami
+#   arba keli, atskirti kableliais, pvz. "source,source2"
+def resolve_source_dirs() -> list:
+    raw = os.environ.get("SOURCE_DIR", "source").strip().lower()
+    if raw == "both":
+        names = ["source", "source2"]
+    else:
+        names = [n.strip() for n in raw.split(",") if n.strip()]
+    return [ROOT / n for n in names]
 
 
 def make_story(img: Image.Image) -> Image.Image:
@@ -54,16 +65,23 @@ def make_story(img: Image.Image) -> Image.Image:
 
 
 def main() -> None:
-    SRC_DIR.mkdir(exist_ok=True)
     DST_DIR.mkdir(exist_ok=True)
-    print(f"Naudojamas aplankas: {SRC_DIR.name}/")
+    src_dirs = resolve_source_dirs()
+    print(f"Naudojami aplankai: {', '.join(d.name + '/' for d in src_dirs)}")
 
-    sources = [
-        p for p in SRC_DIR.iterdir()
-        if p.is_file() and p.suffix.lower() in EXTS
-    ]
-    if not sources:
-        print(f"{SRC_DIR.name}/ aplanke nera paveiksleliu - nieko neapdorota.")
+    # Surenkam (aplankas, failas) poras is visu nurodytu aplanku
+    jobs = []  # [(src_dir, src_path), ...]
+    for d in src_dirs:
+        if not d.is_dir():
+            print(f"DEMESIO: aplanko {d.name}/ nera - praleidziu.")
+            continue
+        found = [p for p in d.iterdir() if p.is_file() and p.suffix.lower() in EXTS]
+        if not found:
+            print(f"DEMESIO: {d.name}/ aplanke nera paveiksleliu - praleidziu.")
+        jobs.extend((d, p) for p in sorted(found))
+
+    if not jobs:
+        print("Nei viename nurodytame aplanke nera paveiksleliu - nieko neapdorota.")
         return
 
     # Issvalom senus apdorotus (kad neliktu naslaiciu), .gitkeep paliekam
@@ -71,14 +89,16 @@ def main() -> None:
         if old.is_file() and old.suffix.lower() in EXTS:
             old.unlink()
 
-    for src in sorted(sources):
-        out = DST_DIR / (src.stem + ".jpg")
+    for src_dir, src in jobs:
+        # Vardas su aplanko priesdeliu, kad vienodi pavadinimai skirtinguose
+        # aplankuose (pvz. source/1.jpg ir source2/1.jpg) nepersirasytu.
+        out = DST_DIR / f"{src_dir.name}__{src.stem}.jpg"
         with Image.open(src) as im:
             story = make_story(im)
         story.save(out, "JPEG", quality=90)
-        print(f"OK: {SRC_DIR.name}/{src.name} -> media/{out.name}")
+        print(f"OK: {src_dir.name}/{src.name} -> media/{out.name}")
 
-    print(f"Apdorota: {len(sources)} paveiksleliu.")
+    print(f"Apdorota: {len(jobs)} paveiksleliu.")
 
 
 if __name__ == "__main__":
