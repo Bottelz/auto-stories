@@ -19,17 +19,24 @@ kompiuteris įjungtas**. Nemokama, be banų rizikos, be naršyklės automatizavi
 auto-stories/
 ├─ post_stories.py                  # pagrindinis skriptas (kelia story)
 ├─ prepare_images.py                # paverčia source/ nuotraukas į 1080x1920 → media/
+├─ sync_from_cloud.sh               # rclone mirror: Google Drive aplankas → source/
 ├─ requirements.txt                 # Python priklausomybės (requests, Pillow)
-├─ source/                          # ČIA dedi BET KOKIO formato nuotraukas
+├─ source/                          # AUTOMATIŠKAI sinchronizuojamas iš telefono (per Drive)
 ├─ media/                           # automatiškai sugeneruoti 1080x1920 story paveikslėliai
+├─ .github/workflows/sync-from-phone.yml # cron (kas 6 h) — Google Drive → source/
 ├─ .github/workflows/daily-stories.yml   # cron — kasdien paruošia + kelia
 ├─ .env.example                     # pavyzdys lokaliam testavimui
 └─ README.md
 ```
 
-> 📐 **Nuotraukas dedi į `source/`** (bet koks formatas). Workflow automatiškai jas paverčia
-> 1080×1920 (9:16) story rėmu (vaizdas centre be iškraipymo, fonas užpildytas suliejus) ir
-> įrašo į `media/`. Tau formatuoti nieko nereikia.
+> 📱 **`source/` pildosi PATS iš telefono.** Telefono galerijos albumas per
+> „Autosync for Google Drive" (dvikryptis, su trynimu) keliauja į Google Drive aplanką,
+> o `sync-from-phone.yml` workflow kas 6 h veidrodiškai (`rclone sync`) perkelia jį į
+> `source/`. **Ištrini nuotrauką telefone → ji dingsta ir iš `source/`, ir iš story.**
+> Ranka į `source/` nieko dėti nereikia.
+
+> 📐 Workflow automatiškai paverčia `source/` nuotraukas 1080×1920 (9:16) story rėmu
+> (vaizdas centre be iškraipymo, fonas užpildytas suliejus) ir įrašo į `media/`.
 
 Skriptas kiekvieną paleidimą **atsitiktinai parenka iki `STORIES_PER_RUN` paveikslėlių**
 (numatyta 50) iš `media/` ir paskelbia kiekvieną kaip atskirą story. Jei `media/` yra
@@ -133,6 +140,39 @@ Repozitorijoje: **Actions → „Daily Stories" → Run workflow**. Tai paleidž
 (nelaukiant ryto). Atidaryk paleidimą ir žiūrėk logą — turi matytis `IG: OK` / `FB: OK`.
 
 Po to cron pats suks kasdien (numatyta **09:00 Lietuvos laiku**).
+
+---
+
+## Telefono sinchronizacija (Google Drive → `source/`)
+
+Kad nuotraukos automatiškai keliautų iš telefono galerijos į `source/` (ir ištrynimai
+propaguotųsi), reikia dviejų dalykų: **telefono pusės** (Autosync) ir **GitHub pusės**
+(rclone tokeno Secret'e).
+
+### Telefono pusė (Android)
+1. Galerijoje pasidaryk vieną albumą (= aplanką), kuriame laikysi story nuotraukas.
+2. Įdiek **„Autosync for Google Drive"** (MetaCtrl).
+3. Sukurk sync porą: tas galerijos albumas ⇄ tavo Google Drive aplankas.
+4. **Sync method = Two-way**, įjunk **„Sync deletions"** (kad ištrynimas telefone
+   ištrintų ir Drive). Įjunk autosync / instant sync.
+
+### GitHub pusė (vienkartinai)
+1. Lokaliai įdiek [rclone](https://rclone.org/install/) ir paleisk `rclone config`:
+   sukurk remote, **pavadink jį `drive`**, tipas — *Google Drive*, autorizuokis savo
+   Google paskyra. (Arba `rclone authorize drive`.)
+2. Rask gautą `rclone.conf` (`rclone config file` parodo kelią) ir užkoduok base64:
+   ```powershell
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:APPDATA\rclone\rclone.conf"))
+   ```
+3. Repozitorijoje: **Settings → Secrets and variables → Actions → New repository secret**,
+   pavadinimas **`RCLONE_CONF_B64`**, reikšmė — nukopijuotas base64.
+4. Drive aplanko ID jau įrašytas `sync_from_cloud.sh` (`DRIVE_FOLDER_ID`). Jei keisi
+   aplanką — paimk naują ID iš nuorodos `.../folders/<ID>` ir atnaujink ten.
+5. Pasitestuok: **Actions → „Sync from phone" → Run workflow**. Po jo `source/` turi
+   atsispindėti tavo telefono albumą.
+
+Po to cron'as kas 6 h pats laikys `source/` šviežią; kasdienis „Daily Stories" workflow
+prieš kėlimą dar kartą sinchronizuoja, tad story visada atspindi naujausią telefono būklę.
 
 ---
 

@@ -8,18 +8,14 @@ on:
     # Jei nori kito laiko - pakeisk skaicius zemiau (formatas: minute valanda * * *).
     - cron: "0 6 * * *"
   workflow_dispatch:      # leidzia paleisti RANKINIU BUDU is Actions skirtuko
-    inputs:
-      source:
-        description: "Is kurio aplanko imti nuotraukas"
-        type: choice
-        default: both
-        options:
-          - source
-          - source2
-          - both        # abu aplankai sujungiami
 
 permissions:
   contents: write   # leidzia Action'ui issaugoti apdorotus paveikslelius atgal i repa
+
+# Serializuojam su "Sync from phone" - kad du workflow'ai neraso i repa vienu metu.
+concurrency:
+  group: repo-content-write
+  cancel-in-progress: false
 
 jobs:
   post:
@@ -36,15 +32,46 @@ jobs:
       - name: Idiegti priklausomybes
         run: pip install -r requirements.txt
 
+      # -------------------------------------------------------------------
+      # Sinchronizacija is telefono (Google Drive) PRIES kelima, kad butu
+      # naudojama naujausia telefono buklė, ISKAITANT istrynimus.
+      # Best-effort: jei sync nepavyksta (pvz. laikina klaida), keliam is
+      # paskutinio sinchronizuoto source/ (ji sviezia laiko "Sync from phone"
+      # workflow, kuris sukasi kas 6 val.).
+      # -------------------------------------------------------------------
+      - name: Idiegti rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+        continue-on-error: true
+
+      - name: Atkurti rclone konfiguracija
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONF_B64 }}" | base64 -d > ~/.config/rclone/rclone.conf
+        continue-on-error: true
+
+      - name: Sinchronizuoti Google Drive -> source/ (mirror)
+        run: bash sync_from_cloud.sh
+        continue-on-error: true
+
+      - name: Issaugoti sinchronizuota source/ i repa
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A source
+          if git diff --staged --quiet; then
+            echo "Pakeitimu source/ nera."
+          else
+            git commit -m "Auto: sinchronizuota is telefono pries kelima"
+            git pull --rebase --autostash origin main || true
+            git push
+          fi
+
       - name: Paruosti paveikslelius (source/ -> media/, 1080x1920)
         run: python prepare_images.py
         env:
-          # Rankiniam paleidimui - is dropdown pasirinkto aplanko.
-          # Cron'ui (9:00 LT) - is repo kintamojo DAILY_SOURCE (Settings ->
-          # Secrets and variables -> Actions -> Variables); jei nenustatytas - 'both'.
-          # Galimos reiksmes: source | source2 | both
-          SOURCE_DIR: ${{ github.event.inputs.source || vars.DAILY_SOURCE || 'both' }}
-          IMAGE_FILL_MODE: contain   # contain = visas vaizdas + fonas; cover = pilnas remas (apkarpo)
+          SOURCE_DIR: source        # vienintelis saltinis (mirror'inamas is telefono)
+          IMAGE_FILL_MODE: contain  # contain = visas vaizdas + fonas; cover = pilnas remas (apkarpo)
 
       - name: Issaugoti apdorotus paveikslelius atgal i repa
         run: |
@@ -55,6 +82,7 @@ jobs:
             echo "Pakeitimu media/ nera - praleidziu."
           else
             git commit -m "Auto: apdoroti story paveiksleliai (1080x1920)"
+            git pull --rebase --autostash origin main || true
             git push
             echo "Palaukiam, kol raw URL atsinaujins..."
             sleep 10
@@ -76,5 +104,3 @@ jobs:
           FB_PAGE_ID:           ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
           # MEDIA_BASE_URL nenustatomas -> naudojamas GitHub raw URL (repas turi buti VIESAS).
-          # Jei paveikslelius laikai kitur (savo serveryje/S3) - iskomentuok ir nurodyk:
-          # MEDIA_BASE_URL: https://tavo-serveris.lt/story-paveiksleliai

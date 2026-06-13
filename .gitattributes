@@ -1,0 +1,6 @@
+# Shell skriptai ir workflow'ai sukasi Linux runner'yje - butinas LF (ne CRLF),
+# kitaip `bash` luztu su "bad interpreter" / "\r" klaidomis.
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.py   text eol=lf
