@@ -92,8 +92,8 @@ jobs:
         run: python post_stories.py
         env:
           GRAPH_VERSION: v23.0
-          ENABLE_IG: "true"
-          ENABLE_FB: "true"
+          ENABLE_IG: "false"
+          ENABLE_FB: "false"
           STORIES_PER_RUN: "50"   # kiek atsitiktiniu nuotrauku kelti per paleidima
           DELAY_BETWEEN: "5"      # pauze sekundemis tarp paskelbimu
           # IG: jei IG susietas su FB puslapiu -> palik graph.facebook.com.
